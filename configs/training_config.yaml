@@ -1,0 +1,82 @@
+# Reference configuration for the published dual-view FiLM model.
+# The scripts set these inline; this file documents the configuration behind
+# the results reported in the paper.
+
+dual_view_film:
+  # Proposed model: PA + lateral ResNet-101, FiLM conditioning on clinical variables
+  pa_backbone: resnet101.tv_in1k      # timm, ImageNet-1k pretrained
+  lat_backbone: resnet101.tv_in1k     # independent weights, not shared with PA
+  fusion: film                        # FiLMFusion
+  clinical_set: lumbar_only           # Sex, Age, Lumbar_Cobb, L1_S1_Lordosis
+  input_resolution: [512, 512]
+  input_channels: 3                   # grayscale radiograph replicated 3x
+  hidden_dim: 256
+  dropout: 0.4
+  task: Structural_L                  # binary: structural vs. non-structural lumbar curve
+
+  optimizer: AdamW
+  base_learning_rate: 1.0e-4
+  weight_decay: 5.0e-4
+  lr_scheduler: step                  # StepLR, step_size=10, gamma=0.5
+  loss: BCEWithLogitsLoss             # pos_weight = N_neg / N_pos, from the train split
+  batch_size: 16
+  total_epochs: 50
+  early_stopping_patience: 7
+  early_stopping_criterion: validation_auroc
+  checkpoint_selection: highest_validation_auroc
+  classification_threshold: 0.5
+  mixed_precision: true               # torch.amp autocast + GradScaler
+
+  augmentation:
+    # Photometric only. Horizontal flips and rotations are deliberately excluded
+    # because curve direction and left-right orientation carry label information.
+    intensity:
+      - random_gamma: {range: [0.98, 1.02]}
+      - random_contrast: {range: [0.95, 1.05]}
+      - gaussian_noise: {sigma: [0.0, 0.01]}
+    normalization: imagenet_mean_std
+
+ablations:
+  # Table 2 — input modality, every arm on the proposed model's exact folds
+  input_modalities:
+    - pa_lat_clinical                 # proposed
+    - pa_clinical
+    - lat_clinical
+    - clinical_only
+    - pa_lat
+    - pa_only
+    - lat_only
+  # Supplementary Table S3 — fusion strategy, identical backbone and schedule
+  fusion_strategies: [film, self_attn, concat, gated, projection]
+  # Supplementary Table S2 — conventional classifiers on the structured variables alone
+  ml_baselines:
+    - logistic_regression
+    - random_forest
+    - svm_rbf
+    - gradient_boosting
+    - lightgbm
+    - xgboost
+
+preprocessing:
+  rescale: DICOM RescaleSlope / RescaleIntercept
+  windowing: VOI LUT, MONOCHROME1 inverted
+  intensity_clipping: [1, 99]         # percentile
+  clahe: {impl: cv2.createCLAHE, clip_limit: 2.0, tile_grid: [8, 8]}
+  gaussian_blur: {kernel: [3, 3], sigma: 0.5}
+  normalize: minmax_to_unit_range
+  pad: zero-pad to square (centered)
+  resize: [512, 512]                  # cv2.INTER_AREA
+  cache: preprocessed images cached once to a pickle, keyed by patient_id
+
+cross_validation:
+  strategy: stratified 5-fold         # StratifiedShuffleSplit, test_size=0.2
+  n_splits: 5
+  random_state: 42
+  patients: 155
+  fold_indices: persisted in each fold's config.json (train_indices / test_indices)
+
+cohort:
+  total: 155
+  structural: 82
+  non_structural: 73
+  reference_standard: side-bending radiograph, adjudicated by an orthopedic specialist
