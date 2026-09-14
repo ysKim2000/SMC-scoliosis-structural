@@ -6,8 +6,6 @@ in [`src/multimodal/dataset.py`](../src/multimodal/dataset.py), and
 [`src/common/preprocessing_demo.py`](../src/common/preprocessing_demo.py) renders
 each intermediate stage to disk (Supplementary Figure S2).
 
-![Preprocessing pipeline](../figures/figureS1_preprocessing.png)
-
 ## Stages
 
 | # | Stage | Detail |

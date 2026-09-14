@@ -22,7 +22,7 @@ They largely do. A dual-view model reaches **AUROC 0.902** with balanced sensiti
 
 ### Architecture
 
-![Architecture of the dual-view multimodal model](figures/figure2_architecture.png)
+![Architecture of the dual-view multimodal model](figures/figure1_architecture.png)
 
 PA and lateral radiographs are encoded by **independent ResNet-101 backbones** (ImageNet-pretrained, weights *not* shared — the two views are different projections of different anatomy and there is no reason to tie them). The two 2048-d pooled vectors are concatenated and layer-normalized into a 4096-d image representation **z**.
 
@@ -49,7 +49,7 @@ Stratified five-fold cross-validation over 155 patients, mean ± SD across folds
 | Precision | 0.860 ± 0.052 |
 | F1 | 0.843 ± 0.057 |
 
-![ROC and calibration curves](figures/figure3_roc_calibration.png)
+![ROC and calibration curves](figures/figure4_roc_calibration.png)
 
 Probabilities are **well calibrated** — Brier score 0.135, expected calibration error 0.053 — which matters more here than the headline AUROC. A calibrated probability supports the intended use: triage. Confident predictions can stand on the standing films; the uncertain middle is exactly where a confirmatory side-bending radiograph still earns its dose.
 
@@ -67,8 +67,6 @@ Every arm is trained on the **proposed model's exact fold indices**, so the rows
 | PA only | 0.652 ± 0.052 | 0.540 ± 0.259 | 0.786 ± 0.267 | 0.817 ± 0.143 | 0.591 ± 0.132 | 0.812 ± 0.057 |
 | Lateral only | 0.632 ± 0.056 | 0.600 ± 0.116 | 0.671 ± 0.170 | 0.694 ± 0.092 | 0.630 ± 0.057 | 0.685 ± 0.102 |
 
-![Modality ablation radar](figures/figure7_modality_radar.png)
-
 Two things are worth reading off this table.
 
 **The clinical variables carry most of the discrimination.** At AUROC 0.847 from four numbers, this is not a task where imaging rescues a weak tabular baseline — and the paper says so plainly rather than overselling the imaging contribution.
@@ -79,7 +77,7 @@ Two things are worth reading off this table.
 
 Classical classifiers on the same four structured variables, as a reference point for the deep model:
 
-![Machine-learning baselines](figures/figure5_ml_baseline.png)
+![Machine-learning baselines](figures/figure2_ml_baseline.png)
 
 | Model | AUROC | Accuracy | Sensitivity | Specificity | F1 |
 |---|---|---|---|---|---|
@@ -95,15 +93,15 @@ Logistic regression at 0.875 is a strong, honest baseline — and the right one 
 
 ### Fusion-strategy ablation
 
-![Fusion strategy radar](figures/figure6_fusion_radar.png)
+![Fusion strategy radar](figures/figure3_fusion_radar.png)
 
 Across all three modality configurations, FiLM held the highest F1 and the highest or tied-highest accuracy. With the full input set it also took the highest AUROC; under reduced inputs another strategy occasionally edged ahead on AUROC alone (gated fusion, 0.867, on lateral + clinical) while still losing on the threshold-based metrics.
 
 ## Where it fails
 
-![Grad-CAM overlays](figures/figure4_gradcam.png)
+![Grad-CAM overlays](figures/figure5_gradcam.png)
 
-Grad-CAM for a representative true positive, true negative, false positive and false negative, on the PA (odd columns) and lateral views. Activation concentrates on the span from the **thoracic curve apex down to the thoracolumbar junction** — not on any single vertebral level, and notably not on the lumbar curve alone. That is the transition zone where vertebral rotation either resolves proximally or persists caudally into the lumbar spine, which is precisely what distinguishes a structural lumbar curve. The model appears to be reading transition-zone morphology rather than re-deriving the lumbar Cobb angle it already receives as a clinical input.
+Grad-CAM on the PA (top) and lateral (bottom) views for two representative true-positive cases (A, B) and two true negatives (C, D). Activation concentrates on the span from the **thoracic curve apex down to the thoracolumbar junction** — not on any single vertebral level, and notably not on the lumbar curve alone. That is the transition zone where vertebral rotation either resolves proximally or persists caudally into the lumbar spine, which is precisely what distinguishes a structural lumbar curve. The model appears to be reading transition-zone morphology rather than re-deriving the lumbar Cobb angle it already receives as a clinical input.
 
 Errors are systematic and clinically legible. Correct predictions sit at the two extremes of curve magnitude and flexibility; **mistakes cluster in the middle.**
 
@@ -118,13 +116,9 @@ False negatives and false positives have the **identical median standing Cobb an
 
 The subgroup analysis says the same thing from another angle. Restricting to larger curves raises sensitivity (0.914 at lumbar Cobb ≥ 40°) while specificity and AUROC fall (0.729 and 0.833) — among big curves the model leans toward calling them structural.
 
-![Subgroup performance](figures/figureS2_subgroup.png)
-
 ## Dataset
 
 Retrospective, single-center cohort: **155 patients with AIS** who underwent posterior spinal fusion at a tertiary referral center between December 2005 and December 2024, each with standing PA and lateral radiographs plus a contemporaneous side-bending radiograph. Patients with non-idiopathic (neuromuscular or congenital) scoliosis, or missing either standing view, were excluded. The IRB approved the protocol and waived individual consent given the retrospective design.
-
-![Cohort and representative radiographs](figures/figure1_cohort_overview.png)
 
 The **reference standard** is the structural status adjudicated by an orthopedic specialist on the side-bending radiograph. A residual bending Cobb angle above 25° was treated as *sufficient but not necessary* — the criterion informed a clinical judgment rather than acting as an automatic cut-off, so some curves judged structural on other grounds sit below 25°.
 
@@ -142,8 +136,6 @@ Expected file layout and full column schemas are in [`docs/data.md`](docs/data.m
 ## Preprocessing
 
 Both views pass through an identical deterministic pipeline: DICOM rescale, VOI LUT windowing (inverting `MONOCHROME1`), 1st–99th percentile clipping, CLAHE, light Gaussian blur, min–max normalization, zero-padding to square, and a resize to 512 × 512 — cached offline, then replicated to three channels and ImageNet-normalized at load time.
-
-![Preprocessing pipeline](figures/figureS1_preprocessing.png)
 
 One choice is worth calling out. **Geometric augmentation is deliberately omitted** — no horizontal flips, no rotation. In most radiograph tasks a flip is free extra data; here it is not. Curve laterality and the left–right relationship between the thoracic and lumbar curves are part of what defines structurality, so a flipped image is anatomically plausible but no longer reliably carries its label. Augmentation is photometric only, and mild (gamma 0.98–1.02, contrast 0.95–1.05, noise σ ≤ 0.01) — enough to discourage memorizing exposure characteristics, not enough to disturb morphology.
 
