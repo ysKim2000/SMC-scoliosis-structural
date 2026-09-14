@@ -76,8 +76,9 @@ Two things are worth reading off this table.
 ### Conventional machine-learning baselines
 
 Classical classifiers on the same four structured variables, as a reference point for the deep model:
-
-<img src="figures/figure2_ml_baseline.png" alt="Machine-learning baselines" width="50%">
+<p align="center">
+    <img src="figures/figure2_ml_baseline.png" alt="Machine-learning baselines" width="45%">
+</p>
 
 | Model | AUROC | Accuracy | Sensitivity | Specificity | F1 |
 |---|---|---|---|---|---|
@@ -185,17 +186,6 @@ DINOv2, RadImageNet and TorchXRayVision encoders through a `source:name` spec,
 used during development to confirm that an ImageNet-pretrained ResNet-101 was the
 better choice for this task.
 
-## Installation
-
-Developed with Python 3.10, PyTorch 2.5.1 (CUDA 12.1) on NVIDIA RTX A6000 GPUs.
-
-```bash
-git clone https://github.com/ysKim2000/SMC-scoliosis-structural.git
-cd SMC-scoliosis-structural
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-```
-
 ## Model selection and hyperparameters
 
 AdamW at lr 1e-4, weight decay 5e-4, StepLR (step 10, γ 0.5), batch size 16, up to 50 epochs with early stopping on validation AUROC (patience 7), automatic mixed precision. The loss is `BCEWithLogitsLoss` with `pos_weight = N_neg / N_pos` computed from each fold's training split — class imbalance is handled in the loss rather than by resampling. A decision threshold of 0.5 was prespecified.
@@ -206,16 +196,9 @@ Architecture and hyperparameters were chosen empirically during development; no 
 
 **Cross-validation, not a held-out test set.** All reported metrics are held-out fold metrics aggregated across five folds, and checkpoint selection happens on the fold being scored. For a 155-patient cohort this is optimistic relative to a true held-out test set. The fold split is fixed (`random_state=42`, indices persisted per fold), but cuDNN is not forced into deterministic mode, so per-fold numbers move slightly between runs. A repeated-CV analysis across seeds puts the model at **AUROC 0.889 ± 0.013**, which is the more conservative estimate of its stability.
 
-## Limitations
-
-Single-center, retrospective, and small (N = 155), with no external validation — the headline numbers should be read as internal cross-validation performance. The cohort is restricted to patients who went on to posterior spinal fusion, so it is skewed toward severe, surgically managed curves; performance on milder or non-surgical AIS is unknown. Requiring a side-bending radiograph for the reference standard may itself have introduced selection bias. And the Grad-CAM interpretation is hypothesis-generating: it localizes where the model looks, not what morphology it encodes there. Quantifying vertebral rotation across the thoracolumbar junction (for example by the Nash–Moe method) would be the way to test it.
-
 ## Data and model availability
 
 The datasets are not readily available because of strict privacy and ethical restrictions regarding patient clinical and imaging data collected at Samsung Medical Center. Requests to access the datasets should be directed to the corresponding author.
 
 Trained model weights are likewise not distributed here: checkpoints were produced and stored inside the Samsung Medical Center internal network and cannot be released under the institutional security policy. All performance figures in this README are the values reported in the manuscript; re-running this code on other data will not reproduce them exactly.
 
-## License
-
-Code is released under the [MIT License](LICENSE). The figures are reproduced from the manuscript.
