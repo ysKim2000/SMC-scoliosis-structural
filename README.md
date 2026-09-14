@@ -137,6 +137,10 @@ Expected file layout and full column schemas are in [`docs/data.md`](docs/data.m
 
 Both views pass through an identical deterministic pipeline: DICOM rescale, VOI LUT windowing (inverting `MONOCHROME1`), 1st–99th percentile clipping, CLAHE, light Gaussian blur, min–max normalization, zero-padding to square, and a resize to 512 × 512 — cached offline, then replicated to three channels and ImageNet-normalized at load time.
 
+![Preprocessing pipeline](figures/figureS1_preprocessing.png)
+
+The same six stages applied to a PA (top) and lateral (bottom) radiograph. Note the lateral view in particular: the raw DICOM is nearly unreadable, and it is the windowing and percentile clipping that recover the vertebral bodies the encoder needs.
+
 One choice is worth calling out. **Geometric augmentation is deliberately omitted** — no horizontal flips, no rotation. In most radiograph tasks a flip is free extra data; here it is not. Curve laterality and the left–right relationship between the thoracic and lumbar curves are part of what defines structurality, so a flipped image is anatomically plausible but no longer reliably carries its label. Augmentation is photometric only, and mild (gamma 0.98–1.02, contrast 0.95–1.05, noise σ ≤ 0.01) — enough to discourage memorizing exposure characteristics, not enough to disturb morphology.
 
 Full parameters in [`docs/preprocessing.md`](docs/preprocessing.md).
