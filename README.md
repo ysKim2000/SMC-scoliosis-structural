@@ -77,7 +77,7 @@ Two things are worth reading off this table.
 
 Classical classifiers on the same four structured variables, as a reference point for the deep model:
 
-![Machine-learning baselines](figures/figure2_ml_baseline.png)
+<img src="figures/figure2_ml_baseline.png" alt="Machine-learning baselines" width="50%">
 
 | Model | AUROC | Accuracy | Sensitivity | Specificity | F1 |
 |---|---|---|---|---|---|
